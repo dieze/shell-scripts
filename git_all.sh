@@ -1,18 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-command=(git -c color.ui=always $@);
+command=(git -c color.ui=always $@)
 
 for file in *; do
   if [ -d "$file" ] && [ -d "$file/.git" ]; then
     (
-      cd "$file";
+      cd "$file"
 
-      result="$(${command[@]})";
+      result="$(${command[@]})"
 
       if [ -n "$result" ]; then
-        printf "\n$file\n";
-        printf "$result\n";
-      fi;
-    );
-  fi;
-done;
+        printf '\n%s\n' "$file"
+        printf '%s\n' "$result"
+      fi
+    )
+  fi
+done
