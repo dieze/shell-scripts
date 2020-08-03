@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #
 # Find deployed maven project versions on PCF
@@ -17,32 +17,32 @@
 # ./find_deployed_version int com.organization.project1 com.organization.project2
 #
 
-dir="${BASH_SOURCE%/*}";
-if [[ ! -d "$dir" ]]; then dir="$PWD"; fi;
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 
-suffix="$1";
-shift;
+suffix="$1"
+shift
 
 for group_id_artifact_id in "$@"; do
-  group_id="${group_id_artifact_id%.*}";
-  artifact_id="${group_id_artifact_id##*.}";
+  group_id="${group_id_artifact_id%.*}"
+  artifact_id="${group_id_artifact_id##*.}"
 
-  script="$dir/find_version_in_pom.sh";
+  script="$dir/find_version_in_pom.sh"
 
   if ! [ -f "$script" ]; then
-    printf "$script could not be found\n" > /dev/stderr;
-    exit 1;
-  fi;
+    printf '%s' "$script could not be found\n" > /dev/stderr
+    exit 1
+  fi
 
   command="
   find_deployed_version() {
     $(cat "$script";)
   }
 
-  find_deployed_version app/META-INF/maven/${group_id}/${artifact_id}/pom.xml;
-  ";
+  find_deployed_version app/META-INF/maven/${group_id}/${artifact_id}/pom.xml
+  "
 
-  pcf_app="${artifact_id}-${suffix}";
-  printf "\n$pcf_app: ";
-  echo "$command" | cf ssh "$pcf_app";
-done;
+  pcf_app="${artifact_id}-${suffix}"
+  printf '\n%s' "$pcf_app: "
+  echo "$command" | cf ssh "$pcf_app"
+done
