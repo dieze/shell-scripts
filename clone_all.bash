@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+#
+# From github user/organization, clone all repositories having a given prefix.
+#
+# Requires node-gh : https://github.com/node-gh/gh
+#
 
 #
 # git clone strategy.
@@ -6,7 +12,17 @@
 # "https": clone using https.
 # "ssh": clone using ssh.
 #
-GIT_CLONE_STRATEGY="ssh"
+git_clone_strategy="ssh"
+
+#
+# Name of organization/user from which clone repositories.
+#
+organization_name="dieze"
+
+#
+# Prefix of repositories to clone on the organization.
+#
+repositories_prefix="config"
 
 #
 # Login to github.
@@ -22,15 +38,15 @@ function login_to_github() {
 #
 function list_private_repositories_details() {
   local IFS=$'\n'
-  local REPOSITORY_DETAIL=""
-  local LINE
+  local repository_detail=""
+  local line
 
-  for LINE in $(gh re --list --detailed --type private); do
-    REPOSITORY_DETAIL="$REPOSITORY_DETAIL\n$LINE"
+  for line in $(gh re --list --detailed --type private); do
+    repository_detail="$repository_detail\n$line"
 
-    if [[ $LINE =~ ^last\ update ]]; then
-      printf '%b\0' "${REPOSITORY_DETAIL/\\n}"
-      REPOSITORY_DETAIL=""
+    if [[ $line =~ ^last\ update ]]; then
+      printf '%b\0' "${repository_detail/\\n}"
+      repository_detail=""
     fi
   done
 }
@@ -41,10 +57,16 @@ function list_private_repositories_details() {
 # stdin: repositories details separated by null character.
 # stdout: organization repositories details separated by null character.
 #
+# Uses global variables:
+#
+# organization_name: name of organization/user from which clone repositories.
+# repositories_prefix: prefix of repositories to clone on the organization.
+#
 function extract_organization_repositories_details() {
-  while IFS= read -r -d '' REPOSITORY_DETAIL; do
-    if [[ $REPOSITORY_DETAIL =~ ^orginanization/(prefix[-_a-zA-Z0-9]+) ]]; then
-      printf '%b\0' "$REPOSITORY_DETAIL"
+  regex="^${organization_name}/(${repositories_prefix}[-_a-zA-Z0-9]+)"
+  while IFS= read -r -d '' repository_detail; do
+    if [[ $repository_detail =~ $regex ]]; then
+      printf '%b\0' "$repository_detail"
     fi
   done
 }
@@ -58,9 +80,9 @@ function extract_organization_repositories_details() {
 # stdout: active repositories details separated by null character.
 #
 function extract_active_repositories_details() {
-  while IFS= read -r -d '' REPOSITORY_DETAIL; do
-    if ! [[ $REPOSITORY_DETAIL =~ (poc|POC|deprecated|DEPRECATED) ]]; then
-      printf '%b\0' "$REPOSITORY_DETAIL"
+  while IFS= read -r -d '' repository_detail; do
+    if ! [[ $repository_detail =~ (poc|POC|deprecated|DEPRECATED) ]]; then
+      printf '%b\0' "$repository_detail"
     fi
   done
 }
@@ -74,8 +96,8 @@ function extract_active_repositories_details() {
 # stdout: repositories names separated by newline character.
 #
 function extract_repositories_full_names() {
-  while IFS= read -r -d '' REPOSITORY_DETAIL; do
-    if [[ $REPOSITORY_DETAIL =~ ^[-_\/a-zA-Z0-9]+ ]]; then
+  while IFS= read -r -d '' repository_detail; do
+    if [[ $repository_detail =~ ^[-_\/a-zA-Z0-9]+ ]]; then
       printf '%b\n' "${BASH_REMATCH[0]}"
     fi
   done
@@ -90,8 +112,8 @@ function extract_repositories_full_names() {
 # stdout: repositories names separated by newline character.
 #
 function extract_repositories_names() {
-  while read -r REPOSITORY_FULL_NAME; do
-    if [[ $REPOSITORY_FULL_NAME =~ ^[-_a-zA-Z0-9]+\/([-_a-zA-Z0-9]+) ]]; then
+  while read -r repository_full_name; do
+    if [[ $repository_full_name =~ ^[-_a-zA-Z0-9]+\/([-_a-zA-Z0-9]+) ]]; then
       printf '%b\n' "${BASH_REMATCH[1]}"
     fi
   done
@@ -105,11 +127,11 @@ function extract_repositories_names() {
 # stdin: repositories full names separated by newline character.
 #
 function clone_repositories() {
-  while read -r REPOSITORY_FULL_NAME; do
-    REPOSITORY_NAME="$(echo "$REPOSITORY_FULL_NAME" | extract_repositories_names)"
+  while read -r repository_full_name; do
+    repository_name="$(echo "$repository_full_name" | extract_repositories_names)"
 
-    if ! [ -d "$REPOSITORY_NAME" ]; then
-      git clone "$(echo "$REPOSITORY_FULL_NAME" | get_clone_urls)"
+    if ! [ -d "$repository_name" ]; then
+      git clone "$(echo "$repository_full_name" | get_clone_urls)"
     fi
   done
 }
@@ -122,19 +144,19 @@ function clone_repositories() {
 #
 # Uses global variables:
 #
-# GIT_CLONE_STRATEGY: the clone strategy to use.
+# git_clone_strategy: the clone strategy to use.
 #
 function get_clone_urls() {
-  while read -r REPOSITORY_FULL_NAME; do
-    case "$GIT_CLONE_STRATEGY" in
+  while read -r repository_full_name; do
+    case "$git_clone_strategy" in
       ssh)
-        printf '%b\n' "git@github.com:${REPOSITORY_FULL_NAME}.git"
+        printf '%b\n' "git@github.com:${repository_full_name}.git"
         ;;
       https)
-        printf '%b\n' "https://github.com/${REPOSITORY_NAME}.git"
+        printf '%b\n' "https://github.com/${repository_name}.git"
         ;;
       *)
-        echo "Unexpected git clone strategy: $GIT_CLONE_STRATEGY" >&2
+        echo "Unexpected git clone strategy: $git_clone_strategy" >&2
         exit 1
         ;;
     esac
